@@ -301,100 +301,97 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const form = document.getElementById('portal-form');
-            const fileInput = document.getElementById('photo-input');
-            const dropzone = document.getElementById('dropzone');
-            const hint = document.getElementById('photo-hint');
-            const photo = document.getElementById('avatar-photo');
-            const placeholder = document.getElementById('avatar-placeholder');
-            const uploadLabel = document.getElementById('upload-label');
-            const submitBtn = document.getElementById('submit-btn');
-            const submitLabel = document.getElementById('submit-label');
-            const statusMsg = document.getElementById('status');
-            const errDiv = document.getElementById('errorMsg');
-            const defaultHint = hint.textContent;
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.getElementById('portal-form');
+        const fileInput = document.getElementById('photo-input');
+        const dropzone = document.getElementById('dropzone');
+        const hint = document.getElementById('photo-hint');
+        const photo = document.getElementById('avatar-photo');
+        const placeholder = document.getElementById('avatar-placeholder');
+        const uploadLabel = document.getElementById('upload-label');
+        const submitBtn = document.getElementById('submit-btn');
+        const submitLabel = document.getElementById('submit-label');
+        const errDiv = document.getElementById('errorMsg');
+        const defaultHint = hint.textContent;
 
-            function handleFile(file) {
-                errDiv.textContent = '';
-                hint.textContent = defaultHint;
-                hint.classList.remove('error');
-                
-                if (!file) return;
-                if (['image/png', 'image/jpeg', 'image/webp'].indexOf(file.type) === -1) { 
-                    hint.textContent = 'Please choose a PNG, JPG, or WebP image.'; 
-                    hint.classList.add('error');
-                    return; 
-                }
-                if (file.size > 4.5 * 1024 * 1024) { 
-                    hint.textContent = 'Photo must be smaller than 4.5MB.'; 
-                    hint.classList.add('error');
-                    return; 
-                }
-                
-                photo.src = URL.createObjectURL(file);
-                photo.classList.remove('hidden');
-                placeholder.classList.add('hidden');
-                uploadLabel.textContent = 'Change Photo';
+        function handleFile(file) {
+            errDiv.textContent = '';
+            hint.textContent = defaultHint;
+            hint.classList.remove('error');
+            
+            if (!file) return;
+            if (['image/png', 'image/jpeg', 'image/webp'].indexOf(file.type) === -1) { 
+                hint.textContent = 'Please choose a PNG, JPG, or WebP image.'; 
+                hint.classList.add('error');
+                return; 
             }
+            if (file.size > 4.5 * 1024 * 1024) { 
+                hint.textContent = 'Photo must be smaller than 4.5MB.'; 
+                hint.classList.add('error');
+                return; 
+            }
+            
+            photo.src = URL.createObjectURL(file);
+            photo.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+            uploadLabel.textContent = 'Change Photo';
+        }
 
-            document.getElementById('upload-btn').addEventListener('click', () => fileInput.click());
-            fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+        document.getElementById('upload-btn').addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
 
-            ['dragenter', 'dragover'].forEach(name => {
-                dropzone.addEventListener(name, (e) => { e.preventDefault(); dropzone.classList.add('drag'); });
-            });
-            ['dragleave', 'drop'].forEach(name => {
-                dropzone.addEventListener(name, (e) => { e.preventDefault(); dropzone.classList.remove('drag'); });
-            });
-            dropzone.addEventListener('drop', (e) => {
-                const files = e.dataTransfer.files;
-                if (files.length > 0) {
-                    fileInput.files = files;
-                    handleFile(files[0]);
-                }
-            });
-
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                        
-                errDiv.textContent = '';
-                statusMsg.classList.add('hidden');
-                submitBtn.disabled = true;
-                submitLabel.textContent = 'Verifying & Generating...';
-                        
-                const formData = new FormData(form);
-                        
-                try {
-                    const res = await fetch('/api/generate-card', { method: 'POST', body: formData });
-                    
-                    // Check if response is JSON
-                    const contentType = res.headers.get("content-type");
-                    if (!contentType || !contentType.includes("application/json")) {
-                        const textError = await res.text();
-                        console.error("Backend returned HTML instead of JSON:", textError);
-                        throw new Error("Server error. Check terminal.");
-                    }
-                
-                    const data = await res.json();
-                
-                    if (!res.ok) {
-                        // This will trigger for "Participant not registered" (404)
-                        throw new Error(data.error || 'Card generation failed.');
-                    }
-                
-                    // Success! Redirect to the card page
-                    window.location.href = data.redirect_url;
-                    
-                } catch (err) {
-                    errDiv.textContent = err.message;
-                } finally {
-                    submitBtn.disabled = false;
-                    submitLabel.textContent = 'Generate My Card';
-                }
-            });
+        ['dragenter', 'dragover'].forEach(name => {
+            dropzone.addEventListener(name, (e) => { e.preventDefault(); dropzone.classList.add('drag'); });
         });
-    </script>
+        ['dragleave', 'drop'].forEach(name => {
+            dropzone.addEventListener(name, (e) => { e.preventDefault(); dropzone.classList.remove('drag'); });
+        });
+        dropzone.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleFile(files[0]);
+            }
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+                    
+            errDiv.textContent = '';
+            submitBtn.disabled = true;
+            submitLabel.textContent = 'Verifying & Generating...';
+                    
+            const formData = new FormData(form);
+                    
+            try {
+                // Single API call that verifies everything and returns the card HTML
+                const res = await fetch('/api/generate-card', { method: 'POST', body: formData });
+                
+                const contentType = res.headers.get("content-type");
+                if (!contentType || !contentType.includes("application/json")) {
+                    throw new Error("Server error. Check terminal.");
+                }
+            
+                const data = await res.json();
+            
+                if (res.ok && data.success && data.html) {
+                    // Replace the entire page with the generated card HTML
+                    document.body.innerHTML = data.html;
+                    window.scrollTo(0, 0); 
+                } else {
+                    throw new Error(data.error || 'Card generation failed.');
+                }
+                
+            } catch (err) {
+                errDiv.textContent = err.message;
+                errDiv.className = 'hint error mt-2 text-center fw-bold';
+            } finally {
+                submitBtn.disabled = false;
+                submitLabel.textContent = 'Generate My Card';
+            }
+        });
+    });
+</script>
 </body>
 </html>

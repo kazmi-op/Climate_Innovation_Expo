@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate Portal | Climate Innovation & Sustainability Expo</title>
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    
+    <style>
+        :root {
+            --forest: #1e3a2f;
+            --emerald: #2e7d5e;
+            --earth: #8b6b4d;
+            --glass-bg: rgba(255, 255, 255, 0.45);
+            --glass-border: rgba(255, 255, 255, 0.6);
+        }
+        
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 50%, #a5d6a7 100%);
+            font-family: 'Manrope', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        /* --- Outer Glass Container --- */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        /* --- Responsive Header --- */
+        .header-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 12px;
+        }
+        .header-logo { 
+            height: 60px; 
+            width: auto; 
+            flex-shrink: 0;
+        }
+        .header-title {
+            flex: 1;
+            text-align: center;
+            font-size: clamp(0.75rem, 3vw, 1.25rem);
+            font-weight: 700;
+            color: var(--forest);
+            margin: 0;
+            line-height: 1.2;
+        }
+
+        /* --- Form Layout --- */
+        .form-wrapper {
+            max-width: 448px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        .intro { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            gap: 4px; 
+            text-align: center; 
+            margin-bottom: 24px; 
+        }
+        .intro h2 { 
+            font-size: clamp(1.25rem, 4vw, 1.625rem); 
+            font-weight: 800; 
+            letter-spacing: -.65px; 
+            color: #064b2d; 
+            margin: 0; 
+        }
+        .intro p { 
+            font-size: clamp(0.8rem, 3vw, 0.85rem); 
+            color: #4b5563; 
+            margin: 0; 
+        }
+
+        #cert-form { display: flex; flex-direction: column; gap: 16px; margin: 0; }
+        
+        .field { display: flex; flex-direction: column; gap: 6px; }
+        .label { font-size: 10px; line-height: 14px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: #064b2d; }
+        
+        .control { position: relative; width: 100%; }
+        .control .icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; pointer-events: none; }
+        .control input, .control select { 
+            width: 100%; 
+            height: 46px; 
+            padding: 0 16px 0 43px; 
+            font-size: 14px; 
+            background: #fff; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 8px; 
+            outline: none; 
+            transition: border-color .15s, box-shadow .15s;
+            color: #1f2937;
+        }
+        .control select { appearance: none; -webkit-appearance: none; padding-right: 40px; cursor: pointer; }
+        .control input:focus, .control select:focus { border-color: #0c6b35; box-shadow: 0 0 0 3px rgba(12,107,53,.1); }
+        .control input.invalid, .control select.invalid { border-color: #b91c1c; }
+        
+        .chevron { position: absolute; right: 13px; top: 50%; transform: translateY(-50%); width: 10px; height: 6px; pointer-events: none; }
+        .divider { height: 1px; background: #e2e8f0; margin: 2px 0; }
+
+        /* --- Submit Button --- */
+        .submit { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 8px; 
+            width: 100%; 
+            margin-top: 6px; 
+            padding: 14px 16px; 
+            font-size: 14px; 
+            font-weight: 700; 
+            color: #fff; 
+            background: #064b2d; 
+            border: 0; 
+            border-radius: 8px;
+            box-shadow: 0 2px 2px rgba(6,75,45,.1), 0 4px 6px rgba(6,75,45,.2); 
+            cursor: pointer; 
+            transition: background .15s, transform .05s; 
+        }
+        .submit:hover { background: #0c6b35; }
+        .submit:active { transform: translateY(1px); }
+        .submit img { width: 14px; height: 14px; }
+        .submit:disabled { opacity: 0.7; cursor: not-allowed; }
+        
+        .status { margin-top: -8px; text-align: center; font-size: 11px; font-weight: 600; color: #0c6b35; }
+
+        /* --- Responsive Breakpoints --- */
+        @media (max-width: 400px) {
+            .header-logo { height: 45px; }
+            .header-title { font-size: 0.7rem; }
+            .glass-card { border-radius: 16px; }
+            .form-wrapper { padding: 0 8px; }
+            .control input, .control select { height: 42px; font-size: 13px; }
+            .submit { padding: 12px; font-size: 13px; }
+        }
+
+        @media (min-width: 768px) {
+            .header-logo { height: 70px; }
+            .header-card { padding: 16px 24px; }
+            .container { max-width: 900px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-3 py-md-5">
+        
+        <!-- Fully Responsive Header -->
+        <div class="glass-card header-card mb-4">
+            <img src="{{ url_for('static', filename='uni_logo.png') }}" alt="University" class="header-logo">
+            <h4 class="header-title">Climate Innovation & Sustainability Expo</h4>
+            <img src="{{ url_for('static', filename='event_logo.png') }}" alt="CCESC" class="header-logo">
+        </div>
+
+        <!-- Main Form Card -->
+        <div class="glass-card p-3 p-md-4 mb-4" id="form-section">
+            <div class="form-wrapper">
+                <div class="intro">
+                    <h2>Certificate Portal</h2>
+                    <p>Enter your exact details to generate your official Certificate of Participation.</p>
+                </div>
+
+                <form id="cert-form" novalidate>
+                    <!-- Full Name -->
+                    <div class="field">
+                        <label class="label" for="full_name">Full Name</label>
+                        <div class="control">
+                            <img class="icon" src="data:image/svg+xml;base64,PHN2ZyBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBvdmVyZmxvdz0idmlzaWJsZSIgc3R5bGU9ImRpc3BsYXk6IGJsb2NrOyIgd2lkdGg9IjE1IiBoZWlnaHQ9IjE1IiB2aWV3Qm94PSIwIDAgMTUgMTUiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGlkPSJJY29uIiBkPSJNMS41IDE1QzEuMDg3NSAxNSAwLjczNDM3NSAxNC44NTMxIDAuNDQwNjI1IDE0LjU1OTRDMC4xNDY4NzUgMTQuMjY1NiAwIDEzLjkxMjUgMCAxMy41VjUuMjVDMCA0LjgzNzUgMC4xNDY4NzUgNC40ODQzOCAwLjQ0MDYyNSA0LjE5MDYzQzAuNzM0Mzc1IDMuODk2ODggMS4wODc1IDMuNzUgMS41IDMuNzVINS4yNVYxLjVDNS4yNSAxLjA4NzUgNS4zOTY4OCAwLjczNDM3NSA1LjY5MDYzIDAuNDQwNjI1QzUuOTg0MzggMC4xNDY4NzUgNi4zMzc1IDAgNi43NSAwSDguMjVDOC42NjI1IDAgOS4wMTU2MiAwLjE0Njg3NSA5LjMwOTM3IDAuNDQwNjI1QzkuNjAzMTIgMC43MzQzNzUgOS43NSAxLjA4NzUgOS43NSAxLjVWMy43NUgxMy41QzEzLjkxMjUgMy43NSAxNC4yNjU2IDMuODk2ODggMTQuNTU5NCA0LjE5MDYzQzE0Ljg1MzEgNC40ODQzOCAxNSA0LjgzNzUgMTUgNS4yNVYxMy41QzE1IDEzLjkxMjUgMTQuODUzMSAxNC4yNjU2IDE0LjU1OTQgMTQuNTU5NEMxNC4yNjU2IDE0Ljg1MzEgMTMuOTEyNSAxNSAxMy41IDE1SDEuNVYxNU0xLjUgMTMuNUgxMy41VjEzLjVWMTMuNVY1LjI1VjUuMjVWNS4yNUg5Ljc1VjUuMjVDOS43NSA1LjY2MjUgOS42MDMxMiA2LjAxNTYyIDkuMzA5MzcgNi4zMDkzN0M5LjAxNTYyIDYuNjAzMTIgOC42NjI1IDYuNzUgOC4yNSA2Ljc1SDYuNzVDNi4zMzc1IDYuNzUgNS45ODQzOCA2LjYwMzEyIDUuNjkwNjMgNi4zMDkzN0M1LjM5Njg4IDYuMDE1NjIgNS4yNSA1LjY2MjUgNS4yNSA1LjI1VjUuMjVIMS41VjUuMjVWNS4yNVYxMy41VjEzLjVWMTMuNVYxMy41TTMgMTJINy41VjExLjY2MjVDNy41IDExLjQ1IDcuNDQwNjMgMTEuMjUzMSA3LjMyMTg4IDExLjA3MTlDNy4yMDMxMiAxMC44OTA2IDcuMDM3NSAxMC43NSA2LjgyNSAxMC42NUM2LjU3NSAxMC41Mzc1IDYuMzIxODggMTAuNDUzMSA2LjA2NTYzIDEwLjM5NjlDNS44MDkzOCAxMC4zNDA2IDUuNTM3NSAxMC4zMTI1IDUuMjUgMTAuMzEyNUM0Ljk2MjUgMTAuMzEyNSA0LjY5MDYyIDEwLjM0MDYgNC40MzQzNyAxMC4zOTY5QzQuMTc4MTIgMTAuNDUzMSAzLjkyNSAxMC41Mzc1IDMuNjc1IDEwLjY1QzMuNDYyNSAxMC43NSAzLjI5Njg4IDEwLjg5MDYgMy4xNzgxMiAxMS4wNzE5QzMuMDU5MzcgMTEuMjUzMSAzIDExLjQ1IDMgMTEuNjYyNVYxMlYxMk05IDEwLjg3NUgxMlY5Ljc1SDlWMTAuODc1VjEwLjg3NU01LjI1IDkuNzVDNS41NjI1IDkuNzUgNS44MjgxMiA5LjY0MDYyIDYuMDQ2ODggOS40MjE4OEM2LjI2NTYyIDkuMjAzMTIgNi4zNzUgOC45Mzc1IDYuMzc1IDguNjI1QzYuMzc1IDguMzEyNSA2LjI2NTYyIDguMDQ2ODggNi4wNDY4OCA3LjgyODEyQzUuODI4MTIgNy42MDkzOCA1LjU2MjUgNy41IDUuMjUgNy41QzQuOTM3NSA3LjUgNC42NzE4OCA3LjYwOTM4IDQuNDUzMTIgNy44MjgxMkM0LjIzNDM4IDguMDQ2ODggNC4xMjUgOC4zMTI1IDQuMTI1IDguNjI1QzQuMTI1IDguOTM3NSA0LjIzNDM4IDkuMjAzMTIgNC40NTMxMiA5LjQyMTg4QzQuNjcxODggOS42NDA2MiA0LjkzNzUgOS43NSA1LjI1IDkuNzVWOS43NU05IDguNjI1SDEyVjcuNUg5VjguNjI1VjguNjI1TTYuNzUgNS4yNUg4LjI1VjEuNUg2Ljc1VjUuMjVWNS4yNU03LjUgOS4zNzVWOS4zNzVWOS4zNzVWOS4zNzVWOS4zNzVWOS4zNzVWOS4zNzVWOS4zNzVWOS4zNzVWOS4zNzVWOS4zNzVWOS4zNzVWOS4zNzVWOS4zNzVWOS4zNzVWOS4zNzVWOS4zNzVWOS4zNzVWOS4zNzVWOS4zNzVWOS4zNzVWOS4zNzUiIGZpbGw9IiMwQzZCMzUiLz4KPC9zdmc+Cg==" alt="" />
+                            <input id="full_name" name="full_name" type="text" required autocomplete="name" />
+                        </div>
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <!-- Roll Number -->
+                    <div class="field">
+                        <label class="label" for="roll_no">Roll Number</label>
+                        <div class="control">
+                            <img class="icon" src="data:image/svg+xml;base64,PHN2ZyBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBvdmVyZmxvdz0idmlzaWJsZSIgc3R5bGU9ImRpc3BsYXk6IGJsb2NrOyIgd2lkdGg9IjE1IiBoZWlnaHQ9IjE1IiB2aWV3Qm94PSIwIDAgMTUgMTUiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGlkPSJJY29uIiBkPSJNMS41IDE1QzEuMDg3NSAxNSAwLjczNDM3NSAxNC44NTMxIDAuNDQwNjI1IDE0LjU1OTRDMC4xNDY4NzUgMTQuMjY1NiAwIDEzLjkxMjUgMCAxMy41VjUuMjVDMCA0LjgzNzUgMC4xNDY4NzUgNC40ODQzOCAwLjQ0MDYyNSA0LjE5MDYzQzAuNzM0Mzc1IDMuODk2ODggMS4wODc1IDMuNzUgMS41IDMuNzVINS4yNVYxLjVDNS4yNSAxLjA4NzUgNS4zOTY4OCAwLjczNDM3NSA1LjY5MDYzIDAuNDQwNjI1QzUuOTg0MzggMC4xNDY4NzUgNi4zMzc1IDAgNi43NSAwSDguMjVDOC42NjI1IDAgOS4wMTU2MiAwLjE0Njg3NSA5LjMwOTM3IDAuNDQwNjI1QzkuNjAzMTIgMC43MzQzNzUgOS43NSAxLjA4NzUgOS43NSAxLjVWMy43NUgxMy41QzEzLjkxMjUgMy43NSAxNC4yNjU2IDMuODk2ODggMTQuNTU5NCA0LjE5MDYzQzE0Ljg1MzEgNC40ODQzOCAxNSA0LjgzNzUgMTUgNS4yNVYxMy41QzE1IDEzLjkxMjUgMTQuODUzMSAxNC4yNjU2IDE0LjU1OTQgMTQuNTU5NEMxNC4yNjU2IDE0Ljg1MzEgMTMuOTEyNSAxNSAxMy41IDE1SDEuNVYxNVpNMS41IDEzLjVIMTMuNVYxMy41VjEzLjVWNS4yNVY1LjI1VjUuMjVIOS43NVY1LjI1QzkuNzUgNS42NjI1IDkuNjAzMTMgNi4wMTU2MyA5LjMwOTM4IDYuMzA5MzhDOS4wMTU2MiA2LjYwMzEzIDguNjYyNSA2Ljc1IDguMjUgNi43NUg2Ljc1QzYuMzM3NSA2Ljc1IDUuOTg0MzggNi42MDMxMyA1LjY5MDYzIDYuMzA5MzhDNS4zOTY4OCA2LjAxNTYzIDUuMjUgNS42NjI1IDUuMjUgNS4yNVY1LjI1SDEuNVY1LjI1VjUuMjVWMTMuNVYxMy41VjEzLjVWMTMuNVpNMyAxMkg3LjVWMTEuNjYyNUM3LjUgMTEuNDUgNy40NDA2MyAxMS4yNTMxIDcuMzIxODggMTEuMDcxOUM3LjIwMzEzIDEwLjg5MDYgNy4wMzc1IDEwLjc1IDYuODI1IDEwLjY1QzYuNTc1IDEwLjUzNzUgNi4zMjE4OCAxMC40NTMxIDYuMDY1NjMgMTAuMzk2OUM1LjgwOTM4IDEwLjM0MDYgNS41Mzc1IDEwLjMxMjUgNS4yNSAxMC4zMTI1QzQuOTYyNSAxMC4zMTI1IDQuNjkwNjMgMTAuMzQwNiA0LjQzNDM4IDEwLjM5NjlDNC4xNzgxMyAxMC40NTMxIDMuOTI1IDEwLjUzNzUgMy42NzUgMTAuNjVDMy40NjI1IDEwLjc1IDMuMjk2ODggMTAuODkwNiAzLjE3ODEzIDExLjA3MTlDMy4wNTkzOCAxMS4yNTMxIDMgMTEuNDUgMyAxMS42NjI1VjEyVjEyWk05IDEwLjg3NUgxMlY5Ljc1SDlWMTAuODc1VjEwLjg3NVpNNS4yNSA5Ljc1QzUuNTYyNSA5Ljc1IDUuODI4MTMgOS42NDA2MyA2LjA0Njg4IDkuNDIxODhDNi4yNjU2MyA5LjIwMzEzIDYuMzc1IDguOTM3NSA2LjM3NSA4LjYyNUM2LjM3NSA4LjMxMjUgNi4yNjU2MyA4LjA0Njg4IDYuMDQ2ODggNy44MjgxM0M1LjgyODEzIDcuNjA5MzggNS41NjI1IDcuNSA1LjI1IDcuNUM0LjkzNzUgNy41IDQuNjcxODggNy42MDkzOCA0LjQ1MzEyIDcuODI4MTNDNC4yMzQzOCA4LjA0Njg4IDQuMTI1IDguMzEyNSA0LjEyNSA4LjYyNUM0LjEyNSA4LjkzNzUgNC4yMzQzOCA5LjIwMzEzIDQuNDUzMTIgOS40MjE4OEM0LjY3MTg4IDkuNjQwNjMgNC45Mzc1IDkuNzUgNS4yNSA5Ljc1VjkuNzVaTTkgOC42MjVIMTJWNy41SDlWOC42MjVWOC42MjVaTTYuNzUgNS4yNUg4LjI1VjEuNUg2Ljc1VjUuMjVWNS4yNVpNNy41IDkuMzc1VjkuMzc1VjkuMzc1VjkuMzc1VjkuMzc1VjkuMzc1VjkuMzc1VjkuMzc1VjkuMzc1VjkuMzc1VjkuMzc1VjkuMzc1VjkuMzc1VjkuMzc1VjkuMzc1VjkuMzc1VjkuMzc1VjkuMzc1VjkuMzc1VjkuMzc1VjkuMzc1VjkuMzc1WiIgZmlsbD0iIzBDNkIzNSIvPgo8L3N2Zz4K" alt="" />
+                            <input id="roll_no" name="roll_no" type="text" required placeholder="e.g. 2K22/CS/01" />
+                        </div>
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <!-- Institute -->
+                    <div class="field">
+                        <label class="label" for="institute">Institute</label>
+                        <div class="control">
+                            <img class="icon" src="data:image/svg+xml;base64,PHN2ZyBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBvdmVyZmxvdz0idmlzaWJsZSIgc3R5bGU9ImRpc3BsYXk6IGJsb2NrOyIgd2lkdGg9IjE1IiBoZWlnaHQ9IjE1IiB2aWV3Qm94PSIwIDAgMTUgMTUiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGlkPSJJY29uIiBkPSJNMi4yNSAxMlY2Ljc1SDMuNzVWMTJIMi4yNVYxMk02Ljc1IDEyVjYuNzVIOC4yNVYxMkg2Ljc1VjEyTTAgMTVWMTMuNUgxNVYxNUgwVjE1TTExLjI1IDEyVjYuNzVIMTIuNzVWMTJIMTEuMjVWMTJNMCA1LjI1VjMuNzVMNy41IDBMMTUgMy43NVY1LjI1SDBWNS4yNU0zLjMzNzUgMy43NUg3LjVIMTEuNjYyNUgzLjMzNzVWMy43NU0zLjMzNzUgMy43NUgxMS42NjI1TDcuNSAxLjY4NzVMMy4zMzc1IDMuNzVWMy43NSIgZmlsbD0iIzBDNkIzNSIvPgo8L3N2Zz4K" alt="" />
+                            <select id="institute_id" name="institute_id" required>
+                                <option value="">Select Institute</option>
+                                {% for inst in institutes %}
+                                <option value="{{ inst.id }}">{{ inst.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <img class="chevron" src="data:image/svg+xml;base64,PHN2ZyBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBvdmVyZmxvdz0idmlzaWJsZSIgc3R5bGU9ImRpc3BsYXk6IGJsb2NrOyIgd2lkdGg9IjEwIiBoZWlnaHQ9IjYuMTY2NjciIHZpZXdCb3g9IjAgMCAxMCA2LjE2NjY3IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8ZyBpZD0iQ29udGFpbmVyIj4KPHBhdGggaWQ9Ikljb24iIGQ9Ik01IDYuMTY2NjdMMCAxLjE2NjY3TDEuMTY2NjcgMEw1IDMuODMzMzNMOC44MzMzMyAwTDEwIDEuMTY2NjdMNSA2LjE2NjY3VjYuMTY2NjciIGZpbGw9IiMwQzZCMzUiLz4KPC9nPgo8L3N2Zz4K" alt="" />
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button class="submit" id="submit-btn" type="submit">
+                        <span id="submit-label">Verify & Generate Certificate</span>
+                        <img src="data:image/svg+xml;base64,PHN2ZyBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBvdmVyZmxvdz0idmlzaWJsZSIgc3R5bGU9ImRpc3BsYXk6IGJsb2NrOyIgd2lkdGg9IjE0IiBoZWlnaHQ9IjE0IiB2aWV3Qm94PSIwIDAgMTQgMTQiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxnIGlkPSJDb250YWluZXIiPgo8cGF0aCBpZD0iSWNvbiIgZD0iTTkuMTMxMjUgNi43NUgwVjUuMjVIOS4xMzEyNUw0LjkzMTI1IDEuMDVMNiAwTDEyIDZMNiAxMkw0LjkzMTI1IDEwLjk1TDkuMTMxMjUgNi43NVY2Ljc1IiBmaWxsPSIjRjRDNTQyIi8+CjwvZz4KPC9zdmc+Cg==" alt="" />
+                    </button>
+                    
+                    <div id="errorMsg" class="hint error mt-2 text-center fw-bold"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        document.getElementById('cert-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+                
+            const form = e.target;
+            const btn = document.getElementById('submit-btn');
+            const label = document.getElementById('submit-label');
+            const errDiv = document.getElementById('errorMsg');
+                
+            btn.disabled = true;
+            label.textContent = 'Verifying...';
+            errDiv.textContent = '';
+                
+            const formData = new FormData(form);
+                
+            try {
+                const res = await fetch('/certificate', { 
+                    method: 'POST', 
+                    body: formData 
+                });
+                
+                const data = await res.json();
+            
+                if (!res.ok) {
+                    throw new Error(data.error || 'Verification failed.');
+                }
+            
+                // If successful, replace the entire body with the certificate HTML
+                if (data.success && data.html) {
+                    document.body.innerHTML = data.html;
+                    // Optional: Scroll to top
+                    window.scrollTo(0, 0); 
+                } else {
+                    throw new Error("Invalid response from server.");
+                }
+            
+            } catch (err) {
+                errDiv.textContent = err.message;
+                btn.disabled = false;
+                label.textContent = 'Verify & Generate Certificate';
+            }
+        });
+    </script>
+</body>
+</html>

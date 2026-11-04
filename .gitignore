@@ -1,0 +1,4 @@
+.env
+__pycache__/
+Expo_app
+Expo_app.pub
