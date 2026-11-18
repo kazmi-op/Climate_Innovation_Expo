@@ -7,5 +7,5 @@ qrcode[pil]==8.0
 Pillow==11.0.0
 fpdf2==2.7.9
 playwright==1.44.0
-vercel_blob
+vercel-blob
 requests

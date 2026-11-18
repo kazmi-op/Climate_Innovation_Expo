@@ -17,7 +17,7 @@ import enum
 from functools import wraps
 from werkzeug.utils import secure_filename
 from PIL import Image
-import vercel_blob
+import vercel-blob
 
 load_dotenv()
 
