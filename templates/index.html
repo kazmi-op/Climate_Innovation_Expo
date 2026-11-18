@@ -195,6 +195,80 @@
         .status { margin-top: -8px; text-align: center; font-size: 11px; font-weight: 600; color: #0c6b35; }
 
         /* --- Responsive Breakpoints --- */
+
+        /* Footer Styles */
+        .custom-footer {
+            width: 100%;
+            padding: 24px 16px;
+            text-align: center;
+            /* Subtle top border to separate from content */
+            border-top: 1px solid rgba(6, 75, 45, 0.1); 
+            margin-top: auto; /* Pushes to bottom if body is flex */
+            background: transparent;
+        }
+    
+        .footer-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            font-family: 'Manrope', 'Inter', system-ui, sans-serif;
+        }
+    
+        .footer-text {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: #6b7280; /* Muted gray */
+        }
+    
+        .footer-name {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--forest, #1e3a2f); /* Uses your theme variable if available */
+            letter-spacing: 0.5px;
+            position: relative;
+            display: inline-block;
+            transition: color 0.3s ease;
+        }
+    
+        /* Subtle gradient underline effect */
+        .footer-name::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -2px;
+            left: 50%;
+            background: var(--emerald, #2e7d5e);
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+            border-radius: 2px;
+        }
+    
+        .footer-name:hover {
+            color: var(--emerald, #2e7d5e);
+        }
+    
+        .footer-name:hover::after {
+            width: 100%;
+        }
+    
+        /* Responsive adjustments */
+        @media (max-width: 576px) {
+            .custom-footer {
+                padding: 16px 12px;
+            }
+            .footer-text {
+                font-size: 10px;
+                letter-spacing: 1px;
+            }
+            .footer-name {
+                font-size: 13px;
+            }
+        }
         
         /* Mobile Devices (Small) */
         @media (max-width: 400px) {
@@ -283,7 +357,11 @@
                                 <img src="data:image/svg+xml;base64,PHN2ZyBwcmVzZXJ2ZUFzcGVjdFJhdGlvPSJub25lIiBvdmVyZmxvdz0idmlzaWJsZSIgc3R5bGU9ImRpc3BsYXk6IGJsb2NrOyIgd2lkdGg9IjE2LjUiIGhlaWdodD0iMTUiIHZpZXdCb3g9IjAgMCAxNi41IDE1IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8ZyBpZD0iQ29udGFpbmVyIj4KPHBhdGggaWQ9Ikljb24iIGQ9Ik03LjUgOVY5VjlWOVY5VjlWOVY5VjlWOVY5VjlWOVY5VjlWOVY5VjlWOVY5TTEuNSAxNUMxLjA4NzUgMTUgMC43MzQzNzUgMTQuODUzMSAwLjQ0MDYyNSAxNC41NTk0QzAuMTQ2ODc1IDE0LjI2NTYgMCAxMy45MTI1IDAgMTMuNVY0LjVDMCA0LjA4NzUgMC4xNDY4NzUgMy43MzQzOCAwLjQ0MDYyNSAzLjQ0MDYyQzAuNzM0Mzc1IDMuMTQ2ODcgMS4wODc1IDMgMS41IDNIMy44NjI1TDUuMjUgMS41SDkuNzVWM0g1LjkwNjI1TDQuNTM3NSA0LjVIMVY0LjVWNC41VjEzLjVWMTMuNVYxMy41SDEzLjVWMTMuNVYxMy41VjYuNzVIMTVWMTMuNUMxNSAxMy45MTI1IDE0Ljg1MzEgMTQuMjY1NiAxNC41NTk0IDE0LjU1OTRDMTQuMjY1NiAxNC44NTMxIDEzLjkxMjUgMTUgMTMuNSAxNUgxLjVWMTVNNy41IDEyLjM3NUM4LjQzNzUgMTIuMzc1IDkuMjM0MzggMTIuMDQ2OSA5Ljg5MDYyIDExLjM5MDZDMTAuNTQ2OSAxMC43MzQ0IDEwLjg3NSA5LjkzNzUgMTAuODc1IDlDMTAuODc1IDguMDYyNSAxMC41NDY5IDcuMjY1NjIgOS44OTA2MiA2LjYwOTM4QzkuMjM0MzggNS45NTMxMiA4LjQzNzUgNS42MjUgNy41IDUuNjI1QzYuNTYyNSA1LjYyNSA1Ljc2NTYyIDUuOTUzMTIgNS4xMDkzOCA2LjYwOTM4QzQuNDUzMTIgNy4yNjU2MiA0LjEyNSA4LjA2MjUgNC4xMjUgOUM0LjEyNSA5LjkzNzUgNC40NTMxMiAxMC43MzQ0IDUuMTA5MzggMTEuMzkwNkM1Ljc2NTYyIDEyLjA0NjkgNi41NjI1IDEyLjM3NSA3LjUgMTIuMzc1VjEyLjM3NU03LjUgMTAuODc1QzYuOTc1IDEwLjg3NSA2LjUzMTI1IDEwLjY5MzggNi4xNjg3NSAxMC4zMzEzQzUuODA2MjUgOS45Njg3NSA1LjYyNSA5LjUyNSA1LjYyNSA5QzUuNjI1IDguNDc1IDUuODA2MjUgOC4wMzEyNSA2LjE2ODc1IDcuNjY4NzVDNi41MzEyNSA3LjMwNjI1IDYuOTc1IDcuMTI1IDcuNSA3LjEyNUM4LjAyNSA3LjEyNSA4LjQ2ODc1IDcuMzA2MjUgOC44MzEyNSA3LjY2ODc1QzkuMTkzNzUgOC4wMzEyNSA5LjM3NSA4LjQ3NSA5LjM3NSA5QzkuMzc1IDkuNTI1IDkuMTkzNzUgOS45Njg3NSA4LjgzMTI1IDEwLjMzMTNDOC40Njg3NSAxMC42OTM4IDguMDI1IDEwLjg3NSA3LjUgMTAuODc1VjEwLjg3NSIgZmlsbD0iIzA2NEIyRCIvPgo8L2c+Cjwvc3ZnPgo=" alt="" />
                                 <span id="upload-label">Upload Photo</span>
                             </button>
-                            <p class="hint" id="photo-hint">PNG or JPG &bull; Max size 5MB</p>
+                            <button class="btn btn-sm btn-outline-danger mt-2 hidden" id="remove-photo-btn" type="button" style="font-size: 11px;">
+                                Remove Photo
+                            </button>
+                            <input type="hidden" name="remove_photo" id="remove-photo-input" value="false">
+                            <p class="hint" id="photo-hint">PNG or JPG &bull; Max size 2MB</p>
                         </div>
                     </div>
 
@@ -297,8 +375,15 @@
                 </form>
             </div>
         </div>
-    </div>
 
+        <footer class="custom-footer">
+            <div class="footer-content">
+                <span class="footer-text">Developed by</span>
+                <span class="footer-name">Syed Aun Muhammad</span>
+            </div>
+        </footer>
+    </div>
+</body>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
@@ -315,6 +400,10 @@
         const errDiv = document.getElementById('errorMsg');
         const defaultHint = hint.textContent;
 
+        // New Elements for Photo Removal
+        const removePhotoBtn = document.getElementById('remove-photo-btn');
+        const removePhotoInput = document.getElementById('remove-photo-input');
+
         function handleFile(file) {
             errDiv.textContent = '';
             hint.textContent = defaultHint;
@@ -326,21 +415,49 @@
                 hint.classList.add('error');
                 return; 
             }
-            if (file.size > 4.5 * 1024 * 1024) { 
-                hint.textContent = 'Photo must be smaller than 4.5MB.'; 
+            
+            // CHANGED: Size limit is now 2MB
+            if (file.size > 2 * 1024 * 1024) { 
+                hint.textContent = 'Photo must be smaller than 2MB.'; 
                 hint.classList.add('error');
                 return; 
             }
             
+            // Show Preview
             photo.src = URL.createObjectURL(file);
             photo.classList.remove('hidden');
             placeholder.classList.add('hidden');
             uploadLabel.textContent = 'Change Photo';
+            
+            // Show Remove Button
+            removePhotoBtn.classList.remove('hidden');
+            removePhotoInput.value = 'false'; // Reset flag since we have a new file
         }
 
+        // Handle Upload Button Click
         document.getElementById('upload-btn').addEventListener('click', () => fileInput.click());
+        
+        // Handle File Selection
         fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
 
+        // Handle Remove Photo Click
+        removePhotoBtn.addEventListener('click', () => {
+            fileInput.value = ''; // Clear the actual file input
+            photo.src = ''; 
+            photo.classList.add('hidden');
+            placeholder.classList.remove('hidden');
+            uploadLabel.textContent = 'Upload Photo';
+            
+            // Hide Remove Button
+            removePhotoBtn.classList.add('hidden');
+            removePhotoInput.value = 'true'; // Tell backend to delete photo
+            
+            hint.textContent = defaultHint;
+            hint.classList.remove('error');
+            errDiv.textContent = '';
+        });
+
+        // Drag and Drop Support
         ['dragenter', 'dragover'].forEach(name => {
             dropzone.addEventListener(name, (e) => { e.preventDefault(); dropzone.classList.add('drag'); });
         });
@@ -355,6 +472,7 @@
             }
         });
 
+        // Form Submission
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
                     
@@ -365,7 +483,6 @@
             const formData = new FormData(form);
                     
             try {
-                // Single API call that verifies everything and returns the card HTML
                 const res = await fetch('/api/generate-card', { method: 'POST', body: formData });
                 
                 const contentType = res.headers.get("content-type");

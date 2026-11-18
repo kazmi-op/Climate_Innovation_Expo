@@ -113,6 +113,30 @@
         }
         .btn-emerald:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(30, 58, 47, 0.3); color: white; }
         
+            @media print {
+        body {
+            background: #ffffff !important; /* Force white background */
+            -webkit-print-color-adjust: exact; 
+            print-color-adjust: exact;
+        }
+        .glass-card, .header-card, .btn, .mt-4 {
+            display: none !important; /* Hide website elements */
+        }
+        .cert-wrapper {
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+        }
+        .certificate-container {
+            box-shadow: none !important; /* Remove drop shadow */
+            width: 100% !important;
+            height: 100vh !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            transform: none !important; /* Remove mobile scaling */
+        }
+    }
+
         /* Scale down on smaller screens for viewing only */
         @media (max-width: 1200px) {
             .cert-wrapper { justify-content: flex-start; }

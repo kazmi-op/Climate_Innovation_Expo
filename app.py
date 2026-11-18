@@ -1,17 +1,20 @@
 import os
 import secrets
 import base64
-import click
+import click, tempfile, zipfile, io
 from io import BytesIO
 from datetime import datetime, timezone
+from playwright.sync_api import sync_playwright
 from dotenv import load_dotenv
-
-import qrcode
-from flask import Flask, render_template, request, jsonify, url_for
+from fpdf import FPDF
+import qrcode, requests
+from flask import Flask, render_template, request, jsonify, url_for, send_file, Response, session, redirect, flash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import UniqueConstraint
 from sqlalchemy.dialects.postgresql import ENUM
+from playwright.sync_api import sync_playwright
 import enum
+from functools import wraps
 from werkzeug.utils import secure_filename
 from PIL import Image
 from vercel.blob import sync as blob 
@@ -59,6 +62,10 @@ class Participant(db.Model):
     institute_id = db.Column(db.BigInteger, db.ForeignKey('institutes.id'), nullable=False)
     photo_blob_url = db.Column(db.String(500), nullable=True)
     
+    # --- NEW COLUMNS ---
+    project_title = db.Column(db.String(255), nullable=True)
+    project_category = db.Column(db.String(100), nullable=True)
+    
     status = db.Column(
         ENUM(ParticipantStatus, name='participant_status', create_type=False), 
         default=ParticipantStatus.active, 
@@ -67,11 +74,6 @@ class Participant(db.Model):
     
     created_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now())
     updated_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now(), onupdate=db.func.now())
-    
-    # Prevent duplicate names in the same institute
-    __table_args__ = (
-        UniqueConstraint('full_name', 'institute_id', name='unique_participant_name_institute'),
-    )
 
 # --- Helpers ---
 def generate_qr_base64(data):
@@ -94,20 +96,20 @@ def index():
 @app.route('/api/generate-card', methods=['POST'])
 def generate_card():
     """
-    Handles both verification and card generation in one secure step.
-    Requires Name, Roll No, and Institute to all match the DB record.
+    Handles verification, optional photo update/removal, and card generation.
     """
     uploaded_blob_url = None
     try:
-        # 1. Get all inputs
+        # 1. Get inputs
         name = request.form.get('full_name', '').strip()
         roll_no = request.form.get('roll_no', '').strip()
         institute_id = request.form.get('institute_id', type=int)
+        remove_photo = request.form.get('remove_photo') == 'true' # <--- NEW
         
         if not name or not roll_no or not institute_id:
             return jsonify({"error": "Name, Roll Number, and Institute are required."}), 400
 
-        # 2. SECURE DATABASE QUERY: Check if ALL THREE match perfectly
+        # 2. Secure Database Query
         participant = Participant.query.filter(
             db.func.lower(Participant.full_name) == name.lower(),
             Participant.roll_no == roll_no,
@@ -115,11 +117,20 @@ def generate_card():
             Participant.status == 'active'
         ).first()
 
-        # If not found, reject immediately
         if not participant:
             return jsonify({"error": "No record found matching the provided Name, Roll No, and Institute."}), 404
 
-        # 3. Handle Optional Photo Upload (Override existing)
+        # 3. Handle Photo Removal (If user explicitly wants to remove it)
+        if remove_photo and participant.photo_blob_url:
+            old_url = participant.photo_blob_url
+            participant.photo_blob_url = None
+            db.session.commit()
+            try: 
+                blob.delete_blob(old_url)
+            except Exception as e:
+                print(f"Blob deletion failed: {e}")
+
+        # 4. Handle New Photo Upload (Max 1MB)
         file = request.files.get('photo')
         if file and file.filename:
             filename = secure_filename(file.filename)
@@ -131,8 +142,11 @@ def generate_card():
                 img = Image.open(file.stream)
                 img.verify()
                 file.stream.seek(0, os.SEEK_END)
-                if file.stream.tell() > 4.5 * 1024 * 1024:
-                    return jsonify({"error": "Image too large (Max 4.5MB)."}), 400
+
+                # CHANGED TO 2MB
+                if file.stream.tell() > 2 * 1024 * 1024: 
+                    return jsonify({"error": "Image too large (Max 2MB)."}), 400
+
                 file.stream.seek(0)
             except Exception:
                 return jsonify({"error": "Corrupted image file."}), 400
@@ -145,34 +159,36 @@ def generate_card():
                 content_type=file.content_type
             )
             uploaded_blob_url = blob_result.url
+            
+            # Delete old photo if it exists
+            old_url = participant.photo_blob_url
             participant.photo_blob_url = uploaded_blob_url 
             db.session.commit()
+            
+            if old_url and "default_avatar" not in old_url:
+                try: blob.delete_blob(old_url)
+                except Exception: pass
 
-        # 4. Generate QR Code containing ONLY the Roll Number
+        # 5. Generate QR Code
         qr_b64 = generate_qr_base64(participant.roll_no)
         
-        # 5. Map abbreviation
+        # 6. Render Card
         inst_name = participant.institute.name
         inst_abbr = "BBS-UTECH" if "Benazir" in inst_name or "BBS" in inst_name else inst_name[:10].upper()
             
-        # 6. Render the card HTML directly and return it
         card_html = render_template('card.html', 
             name=participant.full_name,
             institute_name=inst_name,
             institute_abbr=inst_abbr,
-            photo_url=participant.photo_blob_url,
+            photo_url=participant.photo_blob_url, # Will be None if removed
             qr_code=qr_b64,
             roll_no=participant.roll_no
         )
 
-        return jsonify({
-            "success": True, 
-            "html": card_html
-        })
+        return jsonify({"success": True, "html": card_html})
 
     except Exception as e:
         db.session.rollback()
-        # Cleanup orphaned blob if DB fails
         if uploaded_blob_url:
             try: blob.delete_blob(uploaded_blob_url)
             except Exception: pass
@@ -313,128 +329,200 @@ def add_participant(name, roll_no, institute_id):
         db.session.rollback()
         print(f"Error adding participant (check for duplicate roll_no): {e}")
 
+app.config['SESSION_PERMANENT'] = False
+app.config['SESSION_COOKIE_SECURE'] = False # Set to True if using HTTPS (Vercel)
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'expo2026')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        password = request.form.get('password')
+        if password == ADMIN_PASSWORD:
+            session['logged_in'] = True
+            # Session dies when browser closes (because SESSION_PERMANENT = False)
+            return redirect(url_for('admin_portal'))
+        else:
+            flash('Invalid password', 'error')
+    return render_template('login.html') # We will create this simple form
+
+@app.route('/logout')
+def logout():
+    session.clear() # Instantly destroys the session cookie
+    return redirect(url_for('login'))
+
+def login_required(f):
+    from functools import wraps
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('logged_in'):
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 @app.route('/certificate')
-def certificate_main():
-    """Main page to enter details for certificate generation."""
-    institutes = Institute.query.filter_by(is_active=True).order_by(Institute.name).all()
-    return render_template('certificate_main.html', institutes=institutes)
+@login_required
+def admin_portal():
+    """Shows the admin dashboard to download the ZIP."""
+    return render_template('certificate_main.html')
 
-@app.route('/certificate/generate', methods=['POST'])
-def generate_certificate():
-    """Verifies participant and renders the certificate."""
-    try:
-        roll_no = request.form.get('roll_no', '').strip()
-        
-        if not roll_no:
-            return "Roll Number is required", 400
-
-        # Fetch participant (no need for hash/tokens, just roll_no)
-        participant = Participant.query.filter_by(roll_no=roll_no, status='active').first()
-
-        if not participant:
-            return "Participant not registered or inactive. Please contact admin.", 404
-
-        # Map abbreviation
-        inst_name = participant.institute.name
-        inst_abbr = "BBS-UTECH" if "Benazir" in inst_name or "BBS" in inst_name else inst_name[:10].upper()
-
-        return render_template('certificate.html',
-            name=participant.full_name,
-            roll_no=participant.roll_no,
-            institute_name=inst_name,
-            institute_abbr=inst_abbr
-        )
-
-    except Exception as e:
-        print(f"🔥 CERTIFICATE ERROR: {e}")
-        return "An internal error occurred.", 500
-
-@app.route('/api/verify-certificate', methods=['POST'])
-def verify_certificate():
-    """API to strictly verify Name, Roll No, and Institute match the DB."""
-    try:
-        name = request.form.get('full_name', '').strip()
-        roll_no = request.form.get('roll_no', '').strip()
-        institute_id = request.form.get('institute_id', type=int)
-
-        if not name or not roll_no or not institute_id:
-            return jsonify({"error": "All fields are required."}), 400
-
-        # SECURE QUERY: Check if ALL THREE match perfectly
-        participant = Participant.query.filter(
-            db.func.lower(Participant.full_name) == name.lower(),
-            Participant.roll_no == roll_no,
-            Participant.institute_id == institute_id,
-            Participant.status == 'active'
-        ).first()
-
-        if not participant:
-            # Do not specify which field is wrong for security reasons
-            return jsonify({"error": "No record found matching the provided Name, Roll No, and Institute."}), 404
-
-        # If matched, return the redirect URL for the certificate
-        return jsonify({
-            "success": True, 
-            "redirect_url": url_for('show_certificate', roll_no=participant.roll_no)
-        })
-
-    except Exception as e:
-        print(f"🔥 VERIFICATION ERROR: {e}")
-        return jsonify({"error": "An internal error occurred."}), 500
-# Remove the old @app.route('/certificate') and @app.route('/certificate/<roll_no>')
-# Replace them with this:
-
-@app.route('/certificate', methods=['GET', 'POST'])
-def certificate_portal():
-    """Handles both showing the form (GET) and verifying details (POST)."""
+@app.route('/certificate/download-all', methods=['GET'])
+@login_required
+def download_all_certificates():
+    """Generates PDFs using Playwright and returns a ZIP."""
+    participants = Participant.query.filter_by(status='active').all()
     
-    # 1. Show the form initially
-    if request.method == 'GET':
-        institutes = Institute.query.filter_by(is_active=True).order_by(Institute.name).all()
-        return render_template('certificate_main.html', institutes=institutes)
+    if not participants:
+        flash('No active participants found.', 'error')
+        return redirect(url_for('admin_portal'))
 
-    # 2. Handle Verification (POST)
+    zip_buffer = io.BytesIO()
+
+    with sync_playwright() as p:
+        # Launch headless browser
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for p in participants:
+                # 1. Render the HTML for this specific participant
+                inst_name = p.institute.name
+                inst_abbr = "BBS-UTECH" if "Benazir" in inst_name or "BBS" in inst_name else inst_name[:10].upper()
+                
+                html_content = render_template('certificate.html',
+                    name=p.full_name,
+                    roll_no=p.roll_no,
+                    institute_name=inst_name,
+                    institute_abbr=inst_abbr,
+                    is_pdf_mode=True # We will use this to hide the download button in the PDF
+                )
+
+                # 2. Load HTML into Playwright
+                page.set_content(html_content)
+                
+                # 3. Wait for Google Fonts and images to load
+                page.wait_for_timeout(1000) 
+
+                # 4. Find the certificate container and take a screenshot
+                cert_element = page.locator('#certificate-node')
+                
+                # Save to temp file
+                temp_pdf_path = tempfile.mktemp(suffix='.pdf')
+                
+                # Playwright can generate PDFs directly from the page
+                # We set the format to A4 Landscape and use the background
+                page.pdf(
+                    path=temp_pdf_path, 
+                    format="A4", 
+                    landscape=True, 
+                    print_background=True
+                )
+
+                # 5. Add to ZIP
+                safe_roll = p.roll_no.replace('/', '-')
+                with open(temp_pdf_path, 'rb') as f:
+                    zip_file.writestr(f"Certificate-{safe_roll}.pdf", f.read())
+                
+                os.remove(temp_pdf_path)
+
+        browser.close()
+
+    zip_buffer.seek(0)
+    return Response(
+        zip_buffer.getvalue(),
+        mimetype='application/zip',
+        headers={'Content-Disposition': 'attachment; filename=All-Certificates.zip'}
+    )
+
+
+
+def get_base64_image(filepath):
+    """Reads a static image and converts it to a Base64 Data URI."""
     try:
-        name = request.form.get('full_name', '').strip()
-        roll_no = request.form.get('roll_no', '').strip()
-        institute_id = request.form.get('institute_id', type=int)
-
-        if not name or not roll_no or not institute_id:
-            return jsonify({"error": "All fields are required."}), 400
-
-        # SECURE QUERY: Check if ALL THREE match perfectly
-        participant = Participant.query.filter(
-            db.func.lower(Participant.full_name) == name.lower(),
-            Participant.roll_no == roll_no,
-            Participant.institute_id == institute_id,
-            Participant.status == 'active'
-        ).first()
-
-        if not participant:
-            # Do not specify which field is wrong (prevents brute-forcing)
-            return jsonify({"error": "No record found matching the provided Name, Roll No, and Institute."}), 404
-
-        # If matched, render the certificate HTML directly
-        inst_name = participant.institute.name
-        inst_abbr = "BBS-UTECH" if "Benazir" in inst_name or "BBS" in inst_name else inst_name[:10].upper()
-
-        # Render the certificate template and return it as an HTML string
-        # The frontend JS will inject this into the page.
-        html_content = render_template('certificate.html',
-            name=participant.full_name,
-            roll_no=participant.roll_no,
-            institute_name=inst_name,
-            institute_abbr=inst_abbr
-        )
-        
-        return jsonify({
-            "success": True, 
-            "html": html_content
-        })
-
+        with open(filepath, "rb") as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode('utf-8')
+            # Determine MIME type based on extension
+            ext = os.path.splitext(filepath)[1].lower()
+            mime = "image/png" if ext == ".png" else "image/jpeg"
+            return f"data:{mime};base64,{encoded_string}"
     except Exception as e:
-        print(f"🔥 CERTIFICATE VERIFICATION ERROR: {e}")
-        return jsonify({"error": "An internal error occurred."}), 500
+        print(f"Error loading image {filepath}: {e}")
+        return ""
+
+@app.route('/api/download-card/<roll_no>')
+def download_card_image(roll_no):
+    """Generates a high-res PNG of the card using a headless browser."""
+    participant = Participant.query.filter_by(roll_no=roll_no, status='active').first()
+    if not participant:
+        return "Participant not found", 404
+
+    # 1. Generate QR and Data
+    qr_b64 = generate_qr_base64(participant.roll_no)
+    inst_name = participant.institute.name
+    inst_abbr = "BBS-UTECH" if "Benazir" in inst_name or "BBS" in inst_name else inst_name[:10].upper()
+
+    # 2. Render the HTML template to a string
+    html_content = render_template('card.html', 
+        name=participant.full_name,
+        institute_name=inst_name,
+        institute_abbr=inst_abbr,
+        photo_url=participant.photo_blob_url,
+        qr_code=qr_b64,
+        roll_no=participant.roll_no
+    )
+
+    # 3. CRITICAL FIX: Convert static logos to Base64 and inject them into the HTML
+    # This guarantees Playwright does not need to fetch anything for the logos.
+    static_path = os.path.join(app.root_path, 'static')
+    
+    uni_logo_b64 = get_base64_image(os.path.join(static_path, 'uni_logo.png'))
+    event_logo_b64 = get_base64_image(os.path.join(static_path, 'event_logo.png'))
+
+    # Replace the relative URLs with the Base64 data URIs
+    html_content = html_content.replace(
+        url_for('static', filename='uni_logo.png'), 
+        uni_logo_b64
+    )
+    html_content = html_content.replace(
+        url_for('static', filename='event_logo.png'), 
+        event_logo_b64
+    )
+
+    # 4. Use Playwright to screenshot it
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        
+        # High resolution settings
+        context = browser.new_context(
+            viewport={'width': 500, 'height': 800},
+            device_scale_factor=3 
+        )
+        page = context.new_page()
+        
+        # Load the HTML with the embedded logos
+        page.set_content(html_content, wait_until='networkidle')
+        
+        # Wait for the participant photo (from Vercel Blob) to load
+        page.wait_for_timeout(1500) 
+        
+        # Screenshot the specific card element
+        card_element = page.locator('#participant-card')
+        
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.png')
+        card_element.screenshot(path=temp_file.name, type='png')
+        
+        browser.close()
+
+    # 5. Send the file to the user
+    return send_file(
+        temp_file.name, 
+        mimetype='image/png', 
+        as_attachment=True, 
+        download_name=f"Expo-Card-{participant.roll_no}.png"
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)
+    # app.run(host="0.0.0.0", port=5000, debug=True)
