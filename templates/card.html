@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet" />
-    <script src="https://cdn.jsdelivr.net/npm/modern-screenshot@4.7.0/dist/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.8/dist/html2canvas-pro.min.js"></script>
     <style>
         /* Outer App Styles */
         :root {
@@ -525,4 +525,48 @@
 
 
 </body>
+
+<script>
+    async function downloadCard() {
+        const cardNode = document.getElementById('participant-card');
+        const btn = document.getElementById('downloadPng');
+        const originalText = btn.textContent;
+        
+        btn.textContent = 'Generating...';
+        btn.disabled = true;
+
+        try {
+            // Temporarily remove mobile scaling for high-res export
+            const originalTransform = cardNode.style.transform;
+            cardNode.style.transform = 'none';
+
+            // Use html2canvas-pro which supports backdrop-filter and gradients
+            const canvas = await html2canvas(cardNode, {
+                scale: 3,
+                useCORS: true,
+                allowTaint: false,
+                backgroundColor: '#ffffff',
+                logging: false
+            });
+
+            // Restore scaling
+            cardNode.style.transform = originalTransform;
+
+            // Trigger download
+            const link = document.createElement('a');
+            link.download = `Expo-Card-{{ name | replace(' ', '-') }}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            
+        } catch (err) {
+            console.error("Download Error:", err);
+            alert('Download failed. Please try again.');
+        } finally {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    document.getElementById('downloadPng').addEventListener('click', downloadCard);
+</script>
 </html>
