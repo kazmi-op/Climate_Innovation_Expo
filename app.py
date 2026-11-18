@@ -113,7 +113,7 @@ def generate_card():
 
         # 2. Secure Database Query
         participant = Participant.query.filter(
-            db.func.lower(Participant.full_name) == name.lower(),
+            # db.func.lower(Participant.full_name) == name.lower(),
             Participant.roll_no == roll_no,
             Participant.institute_id == institute_id,
             Participant.status == 'active'
@@ -383,6 +383,7 @@ def get_base64_image(filepath):
     except Exception as e:
         print(f"Error loading image {filepath}: {e}")
         return ""
+    
 if __name__ == '__main__':
     app.run(debug=True)
     # app.run(host="0.0.0.0", port=5000, debug=True)
