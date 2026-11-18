@@ -17,7 +17,7 @@ import enum
 from functools import wraps
 from werkzeug.utils import secure_filename
 from PIL import Image
-import vercel-blob
+from vercel.blob import sync as blob
 
 load_dotenv()
 
@@ -126,7 +126,7 @@ def generate_card():
             participant.photo_blob_url = None
             db.session.commit()
             try: 
-                vercel_blob.delete_blob(old_url)
+                blob.delete_blob(old_url)
             except Exception as e:
                 print(f"Blob deletion failed: {e}")
 
@@ -152,7 +152,7 @@ def generate_card():
                 return jsonify({"error": "Corrupted image file."}), 400
 
             # Upload to Vercel Blob
-            blob_result = vercel_blob.put_blob(
+            blob_result = blob.put_blob(
                 f"participants/{secrets.token_hex(8)}{ext}",
                 file.read(),
                 access="public",
@@ -166,7 +166,7 @@ def generate_card():
             db.session.commit()
             
             if old_url and "default_avatar" not in old_url:
-                try: vercel_blob.delete_blob(old_url)
+                try: blob.delete_blob(old_url)
                 except Exception: pass
 
         # 5. Generate QR Code
@@ -190,7 +190,7 @@ def generate_card():
     except Exception as e:
         db.session.rollback()
         if uploaded_blob_url:
-            try: vercel_blob.delete_blob(uploaded_blob_url)
+            try: blob.delete_blob(uploaded_blob_url)
             except Exception: pass
         print(f"🔥 GENERATION ERROR: {e}")
         return jsonify({"error": "An internal error occurred."}), 500
@@ -268,7 +268,7 @@ def update_participant():
             except Exception:
                 return jsonify({"error": "Corrupted image file."}), 400
 
-            blob_result = vercel_blob.put_blob(
+            blob_result = blob.put_blob(
                 f"participants/{secrets.token_hex(8)}{ext}",
                 file.read(),
                 access="public",
@@ -280,7 +280,7 @@ def update_participant():
             participant.photo_blob_url = uploaded_blob_url
             
             if old_photo_url and "default_avatar" not in old_photo_url:
-                try: vercel_blob.delete_blob(old_photo_url)
+                try: blob.delete_blob(old_photo_url)
                 except Exception: pass
 
         db.session.commit()
@@ -299,7 +299,7 @@ def update_participant():
     except Exception as e:
         db.session.rollback()
         if uploaded_blob_url:
-            try: vercel_blob.delete_blob(uploaded_blob_url)
+            try: blob.delete_blob(uploaded_blob_url)
             except Exception: pass
         print(f"🔥 UPDATE ERROR: {e}")
         return jsonify({"error": "An internal error occurred during update."}), 500
