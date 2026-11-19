@@ -337,6 +337,7 @@ def update_participant():
         print(f"🔥 UPDATE ERROR: {e}")
         return jsonify({"error": "An internal error occurred during update."}), 500
 
+
 # --- CLI Commands ---
 @app.cli.command("add-participant")
 @click.argument("name")
