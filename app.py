@@ -95,6 +95,36 @@ def index():
     institutes = Institute.query.filter_by(is_active=True).order_by(Institute.name).all()
     return render_template('index.html', institutes=institutes)
 
+def get_institute_abbreviation(inst_name):
+    """Maps institute names to their abbreviations."""
+    if not inst_name:
+        return "N/A"
+    
+    # Convert to lowercase for case-insensitive matching
+    name_lower = inst_name.lower()
+    
+    # Dictionary mapping keywords in the name to abbreviations
+    abbreviations = {
+        "benazir": "BBS-UTECH KHAIRPUR",
+        "bbs": "BBS-UTECH KHAIRPUR",
+        "mehran": "MUET KHAIRPUR",
+        "mehran university": "MUET KHAIRPUR",
+        "aror": "AROR UNIVERSITY SUKKUR",
+        "aror university": "AROR UNIVERSITY SUKKUR",
+        "begum": "BNBWU SUKKUR",
+        "begum nusrat": "BNBWU SUKKUR",
+        "nisar": "NAS I.T CENTER, PIR JO GOTH",
+        "nisar ahmed": "NAS I.T CENTER, PIR JO GOTH",
+    }
+    
+    # Iterate through the dictionary to find a match
+    for keyword, abbr in abbreviations.items():
+        if keyword in name_lower:
+            return abbr
+            
+    # Fallback: Use the first 10 characters if no match is found
+    return inst_name[:10].upper()
+
 @app.route('/api/generate-card', methods=['POST'])
 def generate_card():
     """
@@ -114,7 +144,7 @@ def generate_card():
         # 2. Secure Database Query
         participant = Participant.query.filter(
             # db.func.lower(Participant.full_name) == name.lower(),
-            Participant.roll_no == roll_no,
+            db.func.upper(Participant.roll_no) == roll_no.upper(),
             Participant.institute_id == institute_id,
             Participant.status == 'active'
         ).first()
@@ -176,7 +206,7 @@ def generate_card():
         
         # 6. Render Card
         inst_name = participant.institute.name
-        inst_abbr = "BBS-UTECH" if "Benazir" in inst_name or "BBS" in inst_name else inst_name[:10].upper()
+        inst_abbr = get_institute_abbreviation(inst_name)
             
         card_html = render_template('card.html', 
             name=participant.full_name,
@@ -184,7 +214,8 @@ def generate_card():
             institute_abbr=inst_abbr,
             photo_url=participant.photo_blob_url, # Will be None if removed
             qr_code=qr_b64,
-            roll_no=participant.roll_no
+            roll_no=participant.roll_no,
+            project_category=participant.project_category
         )
 
         return jsonify({"success": True, "html": card_html})
@@ -196,7 +227,7 @@ def generate_card():
             except Exception: pass
         print(f"🔥 GENERATION ERROR: {e}")
         return jsonify({"error": "An internal error occurred."}), 500
-    
+
 
 @app.route('/api/verify', methods=['GET', 'POST'])
 def verify_qr():
