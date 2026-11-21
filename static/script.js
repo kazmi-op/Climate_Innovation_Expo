@@ -40,7 +40,7 @@ async function downloadCard(button) {
         crossorigin: img.getAttribute("crossorigin")
     }));
 
-    button.textContent = "Generating Card...";
+    button.textContent = "Downloading Card...";
     button.disabled = true;
 
     try {
