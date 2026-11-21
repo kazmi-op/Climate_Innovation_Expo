@@ -141,16 +141,20 @@ def generate_card():
         if not name or not roll_no or not institute_id:
             return jsonify({"error": "Name, Roll Number, and Institute are required."}), 400
 
-        # 2. Secure Database Query
+        # 1. Query ONLY by Roll No and Institute (Do NOT filter by status here)
         participant = Participant.query.filter(
-            # db.func.lower(Participant.full_name) == name.lower(),
             db.func.upper(Participant.roll_no) == roll_no.upper(),
             Participant.institute_id == institute_id,
-            Participant.status == 'active'
         ).first()
-
+        
+        # 2. Check if the participant exists at all
         if not participant:
-            return jsonify({"error": "No record found matching the provided Name, Roll No, and Institute."}), 404
+            return jsonify({"error": "No record found matching the provided Roll No, and Institute."}), 404
+        
+        # 3. Check the STATUS of the specific participant instance
+        if participant.status != 'active': 
+            return jsonify({"error": "Participant is currently inactive. Please contact the admin."}), 403
+
 
         # 3. Handle Photo Removal (If user explicitly wants to remove it)
         if remove_photo and participant.photo_blob_url:
