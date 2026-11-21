@@ -152,7 +152,7 @@ def generate_card():
             return jsonify({"error": "No record found matching the provided Roll No, and Institute."}), 404
         
         # 3. Check the STATUS of the specific participant instance
-        if participant.status != 'active': 
+        if participant.status != ParticipantStatus.active: 
             return jsonify({"error": "Participant is currently inactive. Please contact the admin."}), 403
 
 
