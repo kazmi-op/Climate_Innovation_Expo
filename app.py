@@ -145,6 +145,7 @@ def generate_card():
         participant = Participant.query.filter(
             db.func.upper(Participant.roll_no) == roll_no.upper(),
             Participant.institute_id == institute_id,
+            Participant.status == 'active'
         ).first()
         
         # 2. Check if the participant exists at all
