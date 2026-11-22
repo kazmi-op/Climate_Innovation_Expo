@@ -137,7 +137,15 @@ async function downloadCard(button) {
         link.click();
         link.remove();
 
+        fetch('/api/log-download', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ roll_no: "{{ roll_no }}" })
+        }).catch(err => console.error("Log failed", err)); // Fail silently
+
         console.log("Participant card downloaded successfully.");
+
+
 
     } catch (error) {
         console.error("Card Download Error:", error);

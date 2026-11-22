@@ -77,6 +77,16 @@ class Participant(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now())
     updated_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now(), onupdate=db.func.now())
 
+class ActivityLog(db.Model):
+    __tablename__ = 'activity_logs'
+    id = db.Column(db.BigInteger, primary_key=True)
+    participant_id = db.Column(db.BigInteger, db.ForeignKey('participants.id', ondelete='CASCADE'), nullable=False)
+    action_type = db.Column(db.String(50), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), server_default=db.func.now())
+
+    # Relationship to easily access participant data if needed
+    participant = db.relationship('Participant', backref='activity_logs')
+
 # --- Helpers ---
 def generate_qr_base64(data):
     """Generates a QR code containing the data and returns it as a base64 string."""
@@ -207,6 +217,11 @@ def generate_card():
 
         # 5. Generate QR Code
         qr_b64 = generate_qr_base64(participant.roll_no)
+
+        # ... after successfully finding the participant and generating the QR ...
+        new_log = ActivityLog(participant_id=participant.id, action_type='GENERATE_CARD')
+        db.session.add(new_log)
+        db.session.commit()
         
         # 6. Render Card
         inst_name = participant.institute.name
@@ -223,7 +238,7 @@ def generate_card():
         )
 
         return jsonify({"success": True, "html": card_html})
-
+        
     except Exception as e:
         db.session.rollback()
         if uploaded_blob_url:
@@ -232,6 +247,20 @@ def generate_card():
         print(f"🔥 GENERATION ERROR: {e}")
         return jsonify({"error": "An internal error occurred."}), 500
 
+
+@app.route('/api/log-download', methods=['POST'])
+def log_download():
+    data = request.get_json()
+    roll_no = data.get('roll_no')
+    
+    participant = Participant.query.filter_by(roll_no=roll_no).first()
+    if participant:
+        new_log = ActivityLog(participant_id=participant.id, action_type='DOWNLOAD_CARD')
+        db.session.add(new_log)
+        db.session.commit()
+        return jsonify({"success": True}), 200
+    
+    return jsonify({"success": False}), 404
 
 @app.route('/api/verify', methods=['GET', 'POST'])
 def verify_qr():
