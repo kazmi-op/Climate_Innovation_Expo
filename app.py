@@ -159,11 +159,14 @@ def generate_card():
         
         # 2. Check if the participant exists at all
         if not participant:
-            return jsonify({"error": "No record found matching the provided Roll No, and Institute."}), 404
+            return jsonify({"error": "No record found matching the provided Name, Roll No, and Institute."}), 404
+
+        if participant.status == ParticipantStatus.revoked:
+            return jsonify({"error": "You have already generated your card. For any help, contact the Admin."}), 403
         
         # 3. Check the STATUS of the specific participant instance
         if participant.status != ParticipantStatus.active: 
-            return jsonify({"error": "Participant is currently inactive. Please contact the admin."}), 403
+            return jsonify({"error": "Your Registration is pending or inactive. Contact the admin."}), 403
 
 
         # 3. Handle Photo Removal (If user explicitly wants to remove it)
@@ -236,6 +239,9 @@ def generate_card():
             roll_no=participant.roll_no,
             project_category=participant.project_category
         )
+
+        participant.status = ParticipantStatus.revoked
+        db.session.commit()
 
         return jsonify({"success": True, "html": card_html})
         
