@@ -510,6 +510,10 @@
                     throw new Error(data.error || 'Card generation failed.');
                 }
                 
+                if (data.generation_count === 2) {
+                    alert(data.message);
+                }
+                
             } catch (err) {
                 errDiv.textContent = err.message;
                 errDiv.className = 'hint error mt-2 text-center fw-bold';

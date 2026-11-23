@@ -146,60 +146,88 @@ def generate_card():
         name = request.form.get('full_name', '').strip()
         roll_no = request.form.get('roll_no', '').strip()
         institute_id = request.form.get('institute_id', type=int)
-        remove_photo = request.form.get('remove_photo') == 'true' # <--- NEW
-        
+        remove_photo = request.form.get('remove_photo') == 'true'
+    
         if not name or not roll_no or not institute_id:
-            return jsonify({"error": "Name, Roll Number, and Institute are required."}), 400
-
-        # 1. Query ONLY by Roll No and Institute (Do NOT filter by status here)
+            return jsonify({
+                "error": "Name, Roll Number, and Institute are required."
+            }), 400
+    
+        # 2. Find participant
         participant = Participant.query.filter(
             db.func.upper(Participant.roll_no) == roll_no.upper(),
             Participant.institute_id == institute_id,
         ).first()
-        
-        # 2. Check if the participant exists at all
+    
         if not participant:
-            return jsonify({"error": "No record found matching the provided Name, Roll No, and Institute."}), 404
-
+            return jsonify({
+                "error": "No record found matching the provided Name, Roll No, and Institute."
+            }), 404
+    
+        # 3. Count previous card generations
+        generation_count = ActivityLog.query.filter_by(
+            participant_id=participant.id,
+            action_type='GENERATE_CARD'
+        ).count()
+    
+        # 4. Check generation limit
+        if generation_count >= 2:
+            return jsonify({
+                "error": "You have already generated your card twice. For help, contact the Admin."
+            }), 403
+    
+        # Allow previously revoked participants only if
+        # they have exactly one recorded card generation.
         if participant.status == ParticipantStatus.revoked:
-            return jsonify({"error": "You have already generated your card. For help, contact the Admin."}), 403
-        
-        # 3. Check the STATUS of the specific participant instance
-        if participant.status != ParticipantStatus.active: 
-            return jsonify({"error": "Your Registration is pending or inactive. For help, contact the admin."}), 403
-
-
-        # 3. Handle Photo Removal (If user explicitly wants to remove it)
+            if generation_count != 1:
+                return jsonify({
+                    "error": "Your registration has been revoked. For help, contact the Admin."
+                }), 403
+    
+        elif participant.status != ParticipantStatus.active:
+            return jsonify({
+                "error": "Your Registration is pending or inactive. For help, contact the admin."
+            }), 403
+    
+        # 5. Handle Photo Removal
         if remove_photo and participant.photo_blob_url:
             old_url = participant.photo_blob_url
             participant.photo_blob_url = None
             db.session.commit()
-            try: 
+    
+            try:
                 blob.delete_blob(old_url)
             except Exception as e:
                 print(f"Blob deletion failed: {e}")
-
-        # 4. Handle New Photo Upload (Max 1MB)
+    
+        # 6. Handle New Photo Upload (Max 2MB)
         file = request.files.get('photo')
+    
         if file and file.filename:
             filename = secure_filename(file.filename)
             ext = os.path.splitext(filename)[1].lower()
+    
             if ext not in {'.jpg', '.jpeg', '.png', '.webp'}:
                 return jsonify({"error": "Invalid image format."}), 400
-
+    
             try:
                 img = Image.open(file.stream)
                 img.verify()
+    
                 file.stream.seek(0, os.SEEK_END)
-
-                # CHANGED TO 2MB
-                if file.stream.tell() > 2 * 1024 * 1024: 
-                    return jsonify({"error": "Image too large (Max 2MB)."}), 400
-
+    
+                if file.stream.tell() > 2 * 1024 * 1024:
+                    return jsonify({
+                        "error": "Image too large (Max 2MB)."
+                    }), 400
+    
                 file.stream.seek(0)
+    
             except Exception:
-                return jsonify({"error": "Corrupted image file."}), 400
-
+                return jsonify({
+                    "error": "Corrupted image file."
+                }), 400
+    
             # Upload to Vercel Blob
             blob_result = blob.put_blob(
                 f"participants/{secrets.token_hex(8)}{ext}",
@@ -207,43 +235,69 @@ def generate_card():
                 access="public",
                 content_type=file.content_type
             )
+    
             uploaded_blob_url = blob_result.url
-            
-            # Delete old photo if it exists
+    
+            # Update participant photo
             old_url = participant.photo_blob_url
-            participant.photo_blob_url = uploaded_blob_url 
+            participant.photo_blob_url = uploaded_blob_url
             db.session.commit()
-            
+    
+            # Delete previous photo
             if old_url and "default_avatar" not in old_url:
-                try: blob.delete_blob(old_url)
-                except Exception: pass
-
-        # 5. Generate QR Code
+                try:
+                    blob.delete_blob(old_url)
+                except Exception:
+                    pass
+                
+        # 7. Generate QR Code
         qr_b64 = generate_qr_base64(participant.roll_no)
-
-        # ... after successfully finding the participant and generating the QR ...
-        new_log = ActivityLog(participant_id=participant.id, action_type='GENERATE_CARD')
-        db.session.add(new_log)
-        db.session.commit()
-        
-        # 6. Render Card
+    
+        # 8. Render Card
         inst_name = participant.institute.name
         inst_abbr = get_institute_abbreviation(inst_name)
-            
-        card_html = render_template('card.html', 
+    
+        card_html = render_template(
+            'card.html',
             name=participant.full_name,
             institute_name=inst_name,
             institute_abbr=inst_abbr,
-            photo_url=participant.photo_blob_url, # Will be None if removed
+            photo_url=participant.photo_blob_url,
             qr_code=qr_b64,
             roll_no=participant.roll_no,
             project_category=participant.project_category
         )
-
-        participant.status = ParticipantStatus.revoked
+    
+        # 9. Record successful card generation
+        new_log = ActivityLog(
+            participant_id=participant.id,
+            action_type='GENERATE_CARD'
+        )
+    
+        db.session.add(new_log)
+    
+        # Calculate generation number including this request
+        new_generation_count = generation_count + 1
+    
+        # 10. Revoke after the second successful generation
+        if new_generation_count >= 2:
+            participant.status = ParticipantStatus.revoked
+    
         db.session.commit()
-
-        return jsonify({"success": True, "html": card_html})
+    
+        # 11. Return generated card
+        return jsonify({
+            "success": True,
+            "html": card_html,
+            "generation_count": new_generation_count,
+            "remaining_generations": 2 - new_generation_count,
+            "message": (
+                "You have generated your card for the second time. "
+                "You cannot generate another card."
+                if new_generation_count == 2
+                else "Your card has been generated successfully."
+            )
+        })
         
     except Exception as e:
         db.session.rollback()
